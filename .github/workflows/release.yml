@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_name:
+        description: "Release name (tag). If not set, uses GITHUB_REF_NAME"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build and Upload flexdot Binaries
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        goos: [linux, darwin]
+        goarch: [amd64, arm64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: "1.24.4"
+
+      - name: Build and zip flexdot binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir -p dist
+          bin_name="flexdot"
+          build_dir="dist/flexdot-${GOOS}-${GOARCH}"
+          mkdir -p "$build_dir"
+          go build -o "$build_dir/$bin_name" ./cmd
+          cd dist
+          zip -r "flexdot-${GOOS}-${GOARCH}.zip" "flexdot-${GOOS}-${GOARCH}"
+          cd ..
+
+      - name: Upload Release Asset (zip)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RELEASE_NAME="${{ github.event.inputs.release_name }}"
+          if [ -z "$RELEASE_NAME" ]; then
+            RELEASE_NAME="$GITHUB_REF_NAME"
+          fi
+          gh release upload "$RELEASE_NAME" dist/flexdot-${{ matrix.goos }}-${{ matrix.goarch }}.zip --clobber
