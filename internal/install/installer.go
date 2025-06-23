@@ -24,7 +24,7 @@ func Install(indexFile, homeDir string, opts Options) error {
 	}
 
 	errs := 0
-	for _, entry := range FlattenIndex(idxMap) {
+	for _, entry := range flattenIndex(idxMap) {
 		if err := installLink(entry.DotfilePath, entry.HomeFilePath, opts.DotfilesDir, homeDir, opts); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			errs++
@@ -35,30 +35,6 @@ func Install(indexFile, homeDir string, opts Options) error {
 		return fmt.Errorf("encountered %d errors during install", errs)
 	}
 	return nil
-}
-
-// FlattenIndex traverses the index map and returns a slice of dotfile/homefile path pairs.
-func FlattenIndex(idx map[string]any) []struct{ DotfilePath, HomeFilePath string } {
-	var result []struct{ DotfilePath, HomeFilePath string }
-	for root, descendants := range idx {
-		flattenDescendants(descendants, []string{root}, &result)
-	}
-	return result
-}
-
-func flattenDescendants(descendants any, paths []string, result *[]struct{ DotfilePath, HomeFilePath string }) {
-	switch v := descendants.(type) {
-	case map[string]any:
-		for k, val := range v {
-			newPaths := append(paths, k)
-			flattenDescendants(val, newPaths, result)
-		}
-	case string:
-		*result = append(*result, struct{ DotfilePath, HomeFilePath string }{
-			DotfilePath:  strings.Join(paths, "/"),
-			HomeFilePath: v,
-		})
-	}
 }
 
 func installLink(dotfilePath, homeFilePath, dotfilesDir, homeDir string, opts Options) error {
@@ -116,4 +92,28 @@ func installLink(dotfilePath, homeFilePath, dotfilesDir, homeDir string, opts Op
 	}
 	OutputLog(homeDir, homeFile, status)
 	return nil
+}
+
+// FlattenIndex traverses the index map and returns a slice of dotfile/homefile path pairs.
+func flattenIndex(idx map[string]any) []struct{ DotfilePath, HomeFilePath string } {
+	var result []struct{ DotfilePath, HomeFilePath string }
+	for root, descendants := range idx {
+		flattenDescendants(descendants, []string{root}, &result)
+	}
+	return result
+}
+
+func flattenDescendants(descendants any, paths []string, result *[]struct{ DotfilePath, HomeFilePath string }) {
+	switch v := descendants.(type) {
+	case map[string]any:
+		for k, val := range v {
+			newPaths := append(paths, k)
+			flattenDescendants(val, newPaths, result)
+		}
+	case string:
+		*result = append(*result, struct{ DotfilePath, HomeFilePath string }{
+			DotfilePath:  strings.Join(paths, "/"),
+			HomeFilePath: v,
+		})
+	}
 }
