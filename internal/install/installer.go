@@ -19,7 +19,6 @@ const (
 )
 
 type Status struct {
-	HomeFile string
 	Result   StatusResult
 	Backuped bool
 }
@@ -61,13 +60,13 @@ func installLink(dotfilePath, homeFilePath, dotfilesDir, homeDir string, opts Op
 		return err
 	}
 
-	status := &Status{HomeFile: homeFile}
+	status := &Status{}
 
 	fi, err := os.Lstat(homeFile)
 	if err == nil && fi.Mode()&os.ModeSymlink != 0 {
 		linkDest, err := os.Readlink(homeFile)
 		if err == nil && linkDest == dotfileAbs {
-			status.Result = AlreadyLinked
+			// status.Result = AlreadyLinked
 			OutputLog(homeDir, homeFile, status)
 			return nil
 		}

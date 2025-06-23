@@ -25,9 +25,9 @@ func OutputLog(homeDir string, homeFile string, status *Status) {
 		colorCode = ""
 	}
 
-	relPath, err := filepath.Rel(homeDir, status.HomeFile)
+	relPath, err := filepath.Rel(homeDir, homeFile)
 	if err != nil {
-		relPath = status.HomeFile
+		relPath = homeFile
 	}
 
 	msg := ""
