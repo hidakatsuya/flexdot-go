@@ -10,6 +10,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type StatusResult int
+
+const (
+	AlreadyLinked StatusResult = iota
+	LinkUpdated
+	LinkCreated
+)
+
+type Status struct {
+	HomeFile string
+	Result   StatusResult
+	Backuped bool
+}
+
 func Install(indexFile, homeDir string, opts Options) error {
 	// Load index YAML
 	f, err := os.Open(indexFile)

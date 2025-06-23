@@ -5,20 +5,6 @@ import (
 	"path/filepath"
 )
 
-type StatusResult int
-
-const (
-	AlreadyLinked StatusResult = iota
-	LinkUpdated
-	LinkCreated
-)
-
-type Status struct {
-	HomeFile string
-	Result   StatusResult
-	Backuped bool
-}
-
 // OutputLog prints the result of an operation on a dotfile.
 func OutputLog(homeDir string, homeFile string, status *Status) {
 	var resultStr string
