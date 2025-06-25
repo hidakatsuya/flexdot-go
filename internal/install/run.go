@@ -11,8 +11,8 @@ type Options struct {
 }
 
 // Run executes the install subcommand logic.
-func Run(indexFile, homeDir string, opts Options) error {
-	if err := Install(indexFile, homeDir, opts); err != nil {
+func Run(indexFile, homeDir, dotfilesDir string, keepMaxBackupCount int) error {
+	if err := Install(indexFile, homeDir, dotfilesDir, keepMaxBackupCount); err != nil {
 		return fmt.Errorf("install failed: %w", err)
 	}
 	return nil

@@ -116,20 +116,14 @@ func runInstall(args []string) {
 		os.Exit(1)
 	}
 
-	opts := install.Options{
-		KeepMaxBackupCount: nil,
-		DotfilesDir:        dotfilesDir,
-	}
-	if cfg != nil {
-		opts.KeepMaxBackupCount = cfg.GetKeepMaxCount()
-	}
+	keepMaxBackupCount := cfg.GetKeepMaxCount()
 
 	// indexFile may be relative to dotfilesDir
 	if !filepath.IsAbs(indexFile) {
 		indexFile = filepath.Join(dotfilesDir, indexFile)
 	}
 
-	if err := install.Run(indexFile, homeDir, opts); err != nil {
+	if err := install.Run(indexFile, homeDir, dotfilesDir, keepMaxBackupCount); err != nil {
 		fmt.Fprintf(os.Stderr, "Install failed: %v\n", err)
 		os.Exit(1)
 	}

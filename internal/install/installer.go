@@ -23,7 +23,12 @@ type Status struct {
 	Backuped bool
 }
 
-func Install(indexFile, homeDir string, opts Options) error {
+type Entry struct {
+	DotfilePath  string
+	HomeFilePath string
+}
+
+func Install(indexFile, homeDir, dotfilesDir string, keepMaxBackupCount int) error {
 	// Load index YAML
 	f, err := os.Open(indexFile)
 	if err != nil {
@@ -38,7 +43,7 @@ func Install(indexFile, homeDir string, opts Options) error {
 
 	errs := 0
 	for _, entry := range flattenIndex(idxMap) {
-		if err := installLink(entry.DotfilePath, entry.HomeFilePath, opts.DotfilesDir, homeDir, opts); err != nil {
+		if err := installLink(entry, dotfilesDir, homeDir, keepMaxBackupCount); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			errs++
 		}
@@ -50,9 +55,9 @@ func Install(indexFile, homeDir string, opts Options) error {
 	return nil
 }
 
-func installLink(dotfilePath, homeFilePath, dotfilesDir, homeDir string, opts Options) error {
-	dotfile := filepath.Join(dotfilesDir, dotfilePath)
-	homeFile := filepath.Join(homeDir, homeFilePath, filepath.Base(dotfile))
+func installLink(entry Entry, dotfilesDir, homeDir string, keepMaxBackupCount int) error {
+	dotfile := filepath.Join(dotfilesDir, entry.DotfilePath)
+	homeFile := filepath.Join(homeDir, entry.HomeFilePath, filepath.Base(dotfile))
 
 	// Ensure dotfile (symlink target) is an absolute path
 	dotfileAbs, err := filepath.Abs(dotfile)
@@ -66,7 +71,7 @@ func installLink(dotfilePath, homeFilePath, dotfilesDir, homeDir string, opts Op
 	if err == nil && fi.Mode()&os.ModeSymlink != 0 {
 		linkDest, err := os.Readlink(homeFile)
 		if err == nil && linkDest == dotfileAbs {
-			// status.Result = AlreadyLinked
+			status.Result = AlreadyLinked
 			OutputLog(homeDir, homeFile, status)
 			return nil
 		}
@@ -98,25 +103,23 @@ func installLink(dotfilePath, homeFilePath, dotfilesDir, homeDir string, opts Op
 	status.Result = LinkCreated
 
 	// Remove outdated backups if needed
-	if opts.KeepMaxBackupCount != nil {
-		if max, ok := opts.KeepMaxBackupCount.(int); ok && max > 0 {
-			backup.RemoveOutdatedBackups(max)
-		}
+	if keepMaxBackupCount > 0 {
+		backup.RemoveOutdatedBackups(keepMaxBackupCount)
 	}
 	OutputLog(homeDir, homeFile, status)
 	return nil
 }
 
 // FlattenIndex traverses the index map and returns a slice of dotfile/homefile path pairs.
-func flattenIndex(idx map[string]any) []struct{ DotfilePath, HomeFilePath string } {
-	var result []struct{ DotfilePath, HomeFilePath string }
+func flattenIndex(idx map[string]any) []Entry {
+	var result []Entry
 	for root, descendants := range idx {
 		flattenDescendants(descendants, []string{root}, &result)
 	}
 	return result
 }
 
-func flattenDescendants(descendants any, paths []string, result *[]struct{ DotfilePath, HomeFilePath string }) {
+func flattenDescendants(descendants any, paths []string, result *[]Entry) {
 	switch v := descendants.(type) {
 	case map[string]any:
 		for k, val := range v {
@@ -124,7 +127,7 @@ func flattenDescendants(descendants any, paths []string, result *[]struct{ Dotfi
 			flattenDescendants(val, newPaths, result)
 		}
 	case string:
-		*result = append(*result, struct{ DotfilePath, HomeFilePath string }{
+		*result = append(*result, Entry{
 			DotfilePath:  strings.Join(paths, "/"),
 			HomeFilePath: v,
 		})

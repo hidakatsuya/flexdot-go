@@ -23,8 +23,6 @@ func DefaultConfig() Config {
 
 func ptrInt(v int) *int { return &v }
 
-// LoadConfig loads config.yml from the specified directory.
-// If the file does not exist, returns nil and no error.
 func LoadConfig(dotfilesDir string) (*Config, error) {
 	path := dotfilesDir + "/config.yml"
 	f, err := os.Open(path)
