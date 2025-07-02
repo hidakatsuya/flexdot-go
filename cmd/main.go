@@ -12,7 +12,7 @@ import (
 	"github.com/hidakatsuya/flexdot-go/internal/install"
 )
 
-const version = "0.3.0"
+const version = "0.3.1"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -53,7 +53,7 @@ Commands:
   install [-H|--home_dir path] <index.yml>
   init
   clear-backups
-  version`
+`
 	fmt.Println(usage)
 }
 
