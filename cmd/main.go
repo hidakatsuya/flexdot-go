@@ -22,7 +22,7 @@ func main() {
 
 	arg := os.Args[1]
 	if arg == "--version" || arg == "-v" {
-		fmt.Println("flexdot version", version)
+		fmt.Println(version)
 		return
 	}
 
@@ -39,9 +39,6 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Failed to clear backups: %v\n", err)
 			os.Exit(1)
 		}
-	case "version":
-		fmt.Println("flexdot version", version)
-		return
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", arg)
 		printUsage()
