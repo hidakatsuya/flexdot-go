@@ -59,41 +59,51 @@ func installLink(entry Entry, dotfilesDir, homeDir string, keepMaxBackupCount in
 	dotfile := filepath.Join(dotfilesDir, entry.DotfilePath)
 	homeFile := filepath.Join(homeDir, entry.HomeFilePath, filepath.Base(dotfile))
 
-	// Ensure dotfile (symlink target) is an absolute path
 	dotfileAbs, err := filepath.Abs(dotfile)
 	if err != nil {
 		return err
 	}
 
-	status := &Status{}
-
 	fi, err := os.Lstat(homeFile)
-	if err == nil && fi.Mode()&os.ModeSymlink != 0 {
-		linkDest, err := os.Readlink(homeFile)
-		if err == nil && linkDest == dotfileAbs {
-			status.Result = AlreadyLinked
-			OutputLog(homeDir, homeFile, status)
-			return nil
-		}
-		// Remove old symlink and relink
-		os.Remove(homeFile)
-		if err := os.Symlink(dotfileAbs, homeFile); err != nil {
-			return err
-		}
-		status.Result = LinkUpdated
+	switch {
+	case err == nil && fi.Mode()&os.ModeSymlink != 0:
+		return handleSymlink(homeFile, dotfileAbs, homeDir)
+	case err == nil && fi.Mode().IsRegular():
+		return handleRegularFile(homeFile, dotfileAbs, homeDir, keepMaxBackupCount)
+	case os.IsNotExist(err):
+		return handleNotExist(homeFile, dotfileAbs, homeDir)
+	default:
+		return err
+	}
+}
+
+func handleSymlink(homeFile, dotfileAbs, homeDir string) error {
+	status := &Status{}
+	linkDest, err := os.Readlink(homeFile)
+	if err == nil && linkDest == dotfileAbs {
+		status.Result = AlreadyLinked
 		OutputLog(homeDir, homeFile, status)
 		return nil
 	}
-	if err == nil && fi.Mode().IsRegular() {
-		// Backup and replace
-		backupDir, berr := backup.BackupFile(homeFile)
-		if berr != nil {
-			return berr
-		}
-		status.Backuped = true
-		backup.RemoveBackupDirIfEmpty(backupDir)
+	// Remove old symlink and relink
+	os.Remove(homeFile)
+	if err := os.Symlink(dotfileAbs, homeFile); err != nil {
+		return err
 	}
-	// Ensure parent dir exists
+	status.Result = LinkUpdated
+	OutputLog(homeDir, homeFile, status)
+	return nil
+}
+
+func handleRegularFile(homeFile, dotfileAbs, homeDir string, keepMaxBackupCount int) error {
+	status := &Status{}
+	backupDir, berr := backup.BackupFile(homeFile)
+	if berr != nil {
+		return berr
+	}
+	status.Backuped = true
+	backup.RemoveBackupDirIfEmpty(backupDir)
+
 	if err := os.MkdirAll(filepath.Dir(homeFile), 0755); err != nil {
 		return err
 	}
@@ -102,10 +112,22 @@ func installLink(entry Entry, dotfilesDir, homeDir string, keepMaxBackupCount in
 	}
 	status.Result = LinkCreated
 
-	// Remove outdated backups if needed
 	if keepMaxBackupCount > 0 {
 		backup.RemoveOutdatedBackups(keepMaxBackupCount)
 	}
+	OutputLog(homeDir, homeFile, status)
+	return nil
+}
+
+func handleNotExist(homeFile, dotfileAbs, homeDir string) error {
+	status := &Status{}
+	if err := os.MkdirAll(filepath.Dir(homeFile), 0755); err != nil {
+		return err
+	}
+	if err := os.Symlink(dotfileAbs, homeFile); err != nil {
+		return err
+	}
+	status.Result = LinkCreated
 	OutputLog(homeDir, homeFile, status)
 	return nil
 }
