@@ -52,8 +52,7 @@ Usage: flexdot <command> [options]
 Commands:
   install [-H|--home_dir path] <index.yml>
   init
-  clear-backups
-`
+  clear-backups`
 	fmt.Println(usage)
 }
 
