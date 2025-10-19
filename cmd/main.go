@@ -83,14 +83,12 @@ func runInstall(args []string) {
 		os.Exit(1)
 	}
 
-	// Load config.yml if present
 	cfg, err := config.LoadConfig(dotfilesDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load config.yml: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Determine homeDir and indexFile (priority: CLI > config.yml > error)
 	homeDir := ""
 	if *homeDirFlag != "" {
 		homeDir = *homeDirFlag

@@ -37,8 +37,13 @@ $HOME/dotfiles/
 │   └── vim/
 │       └── .vimrc
 ├── macOS/
-│   └── bash/
-│       └── .bash_profile
+│   ├── bash/
+│   │   └── .bash_profile
+│   └── codex/
+│       └── prompts/
+│           ├── code.md
+│           ├── debug.md
+│           └── test.md
 ├── ubuntu/
 │   └── bash/
 │       └── .bashrc
@@ -57,9 +62,18 @@ common:
 macOS:
   bash:
     .bash_profile: .
+  codex:
+    prompts:
+      "*.md": .codex/prompts
 ```
 
-This will link `$HOME/dotfiles/common/bin/myscript` to `$HOME/bin/myscript`, and so on.
+This will link:
+- `$HOME/dotfiles/common/bin/myscript` to `$HOME/bin/myscript`
+- `$HOME/dotfiles/common/vim/.vimrc` to `$HOME/.vimrc`
+- `$HOME/dotfiles/macOS/bash/.bash_profile` to `$HOME/.bash_profile`
+- All `.md` files in `$HOME/dotfiles/macOS/codex/prompts/` to `$HOME/.codex/prompts/`
+
+**Wildcard patterns**: You can use the `*` wildcard to match multiple files of the same type. For example, `"*.md"` matches all Markdown files in the directory.
 
 ### Usage
 

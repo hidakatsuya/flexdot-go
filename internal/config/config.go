@@ -41,7 +41,6 @@ func LoadConfig(dotfilesDir string) (*Config, error) {
 	return &cfg, nil
 }
 
-// GetKeepMaxCount returns the keepMaxCount value or the default (10) if not set.
 func (c *Config) GetKeepMaxCount() int {
 	if c == nil || c.KeepMaxCount == nil {
 		return *DefaultConfig().KeepMaxCount

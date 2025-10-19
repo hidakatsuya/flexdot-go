@@ -8,7 +8,6 @@ import (
 
 const baseDir = "backup"
 
-// BackupFile moves the file to a new backup directory and returns the backup directory path.
 func BackupFile(file string) (string, error) {
 	backupDir := filepath.Join(baseDir, time.Now().Format("20060102150405"))
 	if err := os.MkdirAll(backupDir, 0755); err != nil {
@@ -22,7 +21,6 @@ func BackupFile(file string) (string, error) {
 	return backupDir, nil
 }
 
-// RemoveBackupDirIfEmpty removes the backup directory if it's empty.
 func RemoveBackupDirIfEmpty(backupDir string) {
 	entries, err := os.ReadDir(backupDir)
 	if err == nil && len(entries) == 0 {
@@ -30,7 +28,6 @@ func RemoveBackupDirIfEmpty(backupDir string) {
 	}
 }
 
-// RemoveOutdatedBackups removes old backup directories if keepMaxCount is set (>0).
 func RemoveOutdatedBackups(keepMaxCount int) {
 	if keepMaxCount <= 0 {
 		return
@@ -62,7 +59,6 @@ func RemoveOutdatedBackups(keepMaxCount int) {
 	}
 }
 
-// ClearAll removes all backup directories.
 func ClearAll() error {
 	return os.RemoveAll(baseDir)
 }

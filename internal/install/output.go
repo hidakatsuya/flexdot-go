@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 )
 
-// OutputLog prints the result of an operation on a dotfile.
 func OutputLog(homeDir, homeFile string, status *Status) {
 	var resultStr string
 	var colorCode string
