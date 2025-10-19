@@ -391,3 +391,137 @@ func TestInstallMissingArgsAndConfig(t *testing.T) {
 		t.Errorf("expected error message to contain %q, got: %s", want, string(out))
 	}
 }
+
+func TestInstallWildcard(t *testing.T) {
+	workDir := t.TempDir()
+	bin := buildFlexdot(t, workDir)
+
+	// Prepare dotfiles dir with nested structure
+	dotfilesDir := filepath.Join(workDir, "dotfiles")
+	macOSDir := filepath.Join(dotfilesDir, "macOS", "codex", "prompts")
+	if err := os.MkdirAll(macOSDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create multiple .md files that should match the wildcard
+	mdFiles := []string{"prompt1.md", "prompt2.md", "readme.md"}
+	for _, mdFile := range mdFiles {
+		filePath := filepath.Join(macOSDir, mdFile)
+		if err := os.WriteFile(filePath, []byte("content"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Create a .txt file that should NOT match
+	txtFile := filepath.Join(macOSDir, "other.txt")
+	if err := os.WriteFile(txtFile, []byte("text"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Prepare index.yml with wildcard pattern
+	indexYml := filepath.Join(dotfilesDir, "index.yml")
+	indexContent := `macOS:
+  codex:
+    prompts:
+      "*.md": .codex/prompts
+`
+	if err := os.WriteFile(indexYml, []byte(indexContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Prepare home dir
+	homeDir := filepath.Join(workDir, "home")
+	if err := os.MkdirAll(homeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Run flexdot install
+	cmd := exec.Command(bin, "install", "-H", homeDir, "index.yml")
+	cmd.Dir = dotfilesDir
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("flexdot install with wildcard failed: %v\n%s", err, string(out))
+	}
+
+	// Check that all .md files are symlinked
+	targetDir := filepath.Join(homeDir, ".codex", "prompts")
+	for _, mdFile := range mdFiles {
+		linkPath := filepath.Join(targetDir, mdFile)
+		fi, err := os.Lstat(linkPath)
+		if err != nil {
+			t.Errorf("symlink not created for %s: %v", mdFile, err)
+			continue
+		}
+		if fi.Mode()&os.ModeSymlink == 0 {
+			t.Errorf("not a symlink: %v", linkPath)
+			continue
+		}
+		dest, err := os.Readlink(linkPath)
+		if err != nil {
+			t.Errorf("failed to read symlink for %s: %v", mdFile, err)
+			continue
+		}
+		expected := filepath.Join(macOSDir, mdFile)
+		if dest != expected {
+			t.Errorf("symlink for %s points to %s, want %s", mdFile, dest, expected)
+		}
+	}
+
+	// Check that .txt file is NOT symlinked
+	txtLinkPath := filepath.Join(targetDir, "other.txt")
+	if _, err := os.Lstat(txtLinkPath); err == nil {
+		t.Errorf(".txt file should not have been symlinked, but it was")
+	}
+}
+
+func TestInstallWildcardNoMatches(t *testing.T) {
+	workDir := t.TempDir()
+	bin := buildFlexdot(t, workDir)
+
+	// Prepare dotfiles dir with nested structure but no matching files
+	dotfilesDir := filepath.Join(workDir, "dotfiles")
+	macOSDir := filepath.Join(dotfilesDir, "macOS", "codex", "prompts")
+	if err := os.MkdirAll(macOSDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create only .txt files (no .md files to match)
+	txtFile := filepath.Join(macOSDir, "other.txt")
+	if err := os.WriteFile(txtFile, []byte("text"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Prepare index.yml with wildcard pattern
+	indexYml := filepath.Join(dotfilesDir, "index.yml")
+	indexContent := `macOS:
+  codex:
+    prompts:
+      "*.md": .codex/prompts
+`
+	if err := os.WriteFile(indexYml, []byte(indexContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Prepare home dir
+	homeDir := filepath.Join(workDir, "home")
+	if err := os.MkdirAll(homeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Run flexdot install (should succeed even with no matches)
+	cmd := exec.Command(bin, "install", "-H", homeDir, "index.yml")
+	cmd.Dir = dotfilesDir
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("flexdot install with wildcard (no matches) failed: %v\n%s", err, string(out))
+	}
+
+	// Check that target directory is not created since there were no matches
+	targetDir := filepath.Join(homeDir, ".codex", "prompts")
+	entries, err := os.ReadDir(targetDir)
+	// Directory might not exist or be empty, both are acceptable
+	if err == nil && len(entries) > 0 {
+		t.Errorf("expected no symlinks to be created, but found %d entries", len(entries))
+	}
+}
+

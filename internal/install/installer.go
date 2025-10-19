@@ -42,7 +42,7 @@ func Install(indexFile, homeDir, dotfilesDir string, keepMaxBackupCount int) err
 	}
 
 	errs := 0
-	for _, entry := range flattenIndex(idxMap) {
+	for _, entry := range flattenIndex(idxMap, dotfilesDir) {
 		if err := installLink(entry, dotfilesDir, homeDir, keepMaxBackupCount); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			errs++
@@ -133,25 +133,70 @@ func handleNotExist(homeFile, dotfileAbs, homeDir string) error {
 }
 
 // FlattenIndex traverses the index map and returns a slice of dotfile/homefile path pairs.
-func flattenIndex(idx map[string]any) []Entry {
+func flattenIndex(idx map[string]any, dotfilesDir string) []Entry {
 	var result []Entry
 	for root, descendants := range idx {
-		flattenDescendants(descendants, []string{root}, &result)
+		flattenDescendants(descendants, []string{root}, dotfilesDir, &result)
 	}
 	return result
 }
 
-func flattenDescendants(descendants any, paths []string, result *[]Entry) {
+func flattenDescendants(descendants any, paths []string, dotfilesDir string, result *[]Entry) {
 	switch v := descendants.(type) {
 	case map[string]any:
 		for k, val := range v {
 			newPaths := append(paths, k)
-			flattenDescendants(val, newPaths, result)
+			flattenDescendants(val, newPaths, dotfilesDir, result)
 		}
 	case string:
+		hasWildcard := false
+		wildcardIndex := -1
+
+		for i, p := range paths {
+			if strings.Contains(p, "*") {
+				hasWildcard = true
+				wildcardIndex = i
+				break
+			}
+		}
+
+		if hasWildcard {
+			expandWildcard(paths, wildcardIndex, v, dotfilesDir, result)
+		} else {
+			*result = append(*result, Entry{
+				DotfilePath:  strings.Join(paths, "/"),
+				HomeFilePath: v,
+			})
+		}
+	}
+}
+
+func expandWildcard(paths []string, wildcardIndex int, homeFilePath string, dotfilesDir string, result *[]Entry) {
+	patternPath := strings.Join(paths[:wildcardIndex+1], "/")
+
+	fullPattern := filepath.Join(dotfilesDir, patternPath)
+
+	matches, err := filepath.Glob(fullPattern)
+	if err != nil || len(matches) == 0 {
+		return
+	}
+
+	for _, match := range matches {
+		relPath, err := filepath.Rel(dotfilesDir, match)
+		if err != nil {
+			continue
+		}
+
+		matchPath := filepath.ToSlash(relPath)
+
+		if wildcardIndex < len(paths)-1 {
+			remainingPaths := paths[wildcardIndex+1:]
+			matchPath = matchPath + "/" + strings.Join(remainingPaths, "/")
+		}
+
 		*result = append(*result, Entry{
-			DotfilePath:  strings.Join(paths, "/"),
-			HomeFilePath: v,
+			DotfilePath:  matchPath,
+			HomeFilePath: homeFilePath,
 		})
 	}
 }
