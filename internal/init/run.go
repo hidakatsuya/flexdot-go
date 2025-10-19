@@ -9,8 +9,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Run executes the init subcommand logic.
-// It creates a config.yml file with default values in the current directory.
 func Run() error {
 	configPath := filepath.Join(".", "config.yml")
 

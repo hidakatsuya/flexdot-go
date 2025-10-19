@@ -29,7 +29,6 @@ type Entry struct {
 }
 
 func Install(indexFile, homeDir, dotfilesDir string, keepMaxBackupCount int) error {
-	// Load index YAML
 	f, err := os.Open(indexFile)
 	if err != nil {
 		return fmt.Errorf("failed to open index file: %w", err)
