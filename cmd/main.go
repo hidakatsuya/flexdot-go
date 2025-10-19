@@ -12,7 +12,7 @@ import (
 	"github.com/hidakatsuya/flexdot-go/internal/install"
 )
 
-const version = "0.3.2"
+const version = "0.4.0"
 
 func main() {
 	if len(os.Args) < 2 {
